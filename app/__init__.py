@@ -20,6 +20,8 @@ def create_app():
     # CORS(app)
     CORS(app, resources={r"/*": {"origins": "*"}})
 
+    with app.app_context():
+        db.create_all()  #
 
     mail = Mail(app)
     JWTManager(app)
