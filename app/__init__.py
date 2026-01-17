@@ -1,3 +1,19 @@
+from flask import Flask, jsonify, request, redirect
+from flask_cors import CORS
+from flask_mail import Mail, Message
+from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature
+from flask_jwt_extended import JWTManager
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
+from app.model import db
+from .routes.auth import auth_bp
+from .routes.view import view_bp
+from .routes.payments import payment_bp
+from .routes.plans import plans_bp
+from .config import DevelopmentConfig
+
+from datetime import datetime
+
 def create_app():
     app = Flask(__name__)
     app.config.from_object(DevelopmentConfig)
