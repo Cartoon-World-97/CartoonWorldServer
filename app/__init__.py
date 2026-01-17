@@ -17,27 +17,23 @@ from datetime import datetime
 def create_app():
     app = Flask(__name__)
     app.config.from_object(DevelopmentConfig)
+    # CORS(app)
     CORS(app, resources={r"/*": {"origins": "*"}})
 
-    # Initialize extensions
-    db.init_app(app)
+
     mail = Mail(app)
     JWTManager(app)
-
-    # Create tables (development only)
+    db.init_app(app)
     with app.app_context():
         db.create_all()
 
-    # Serializer for email links
     S = URLSafeTimedSerializer(app.config['SECRET_KEY'])
 
-    # Register blueprints
     app.register_blueprint(auth_bp, url_prefix="/auth")
     app.register_blueprint(view_bp, url_prefix="/")
     app.register_blueprint(payment_bp, url_prefix="/payments")
     app.register_blueprint(plans_bp, url_prefix="/plans")
 
-    # Routes
     @app.route('/send-email', methods=['GET'])
     def send_email():
         msg = Message(
