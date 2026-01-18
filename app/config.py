@@ -18,6 +18,7 @@ class Config:
     f"{os.getenv('DB_HOST', 'localhost')}:{os.getenv('DB_PORT', 3306)}/"
     f"{os.getenv('DB_NAME', 'cartoonworld')}"
 )
+    print(SQLALCHEMY_DATABASE_URI)
 
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
