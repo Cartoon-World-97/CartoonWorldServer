@@ -13,11 +13,12 @@ class Config:
     JWT_REFRESH_TOKEN_EXPIRES = timedelta(days=30)      
     
     SQLALCHEMY_DATABASE_URI = (
-        f"mysql+pymysql://{os.getenv('DB_USER', 'root')}:" 
-        f"{os.getenv('DB_PASSWORD', '')}@"
-        f"{os.getenv('DB_HOST', 'localhost')}/"
-        f"{os.getenv('DB_NAME', 'cartoonworld')}"
-    )
+    f"mysql+pymysql://{os.getenv('DB_USER', 'root')}:" 
+    f"{os.getenv('DB_PASSWORD', '')}@"
+    f"{os.getenv('DB_HOST', 'localhost')}:{os.getenv('DB_PORT', 3306)}/"
+    f"{os.getenv('DB_NAME', 'cartoonworld')}"
+)
+
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
     # Mail
