@@ -12,12 +12,20 @@ class Config:
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(days=7)
     JWT_REFRESH_TOKEN_EXPIRES = timedelta(days=30)      
     
+    # SQLALCHEMY_DATABASE_URI = (
+    #     f"mysql+pymysql://{os.getenv('DB_USER', 'root')}:" 
+    #     f"{os.getenv('DB_PASSWORD', '')}@"
+    #     f"{os.getenv('DB_HOST', 'localhost')}/"
+    #     f"{os.getenv('DB_NAME', 'cartoonworld')}"
+    # )
     SQLALCHEMY_DATABASE_URI = (
-        f"mysql+pymysql://{os.getenv('DB_USER', 'root')}:" 
-        f"{os.getenv('DB_PASSWORD', '')}@"
-        f"{os.getenv('DB_HOST', 'localhost')}/"
-        f"{os.getenv('DB_NAME', 'cartoonworld')}"
+    f"postgresql+psycopg2://{os.getenv('DB_USER', 'postgres')}:"
+    f"{os.getenv('DB_PASSWORD', '')}@"
+    f"{os.getenv('DB_HOST', 'localhost')}:"
+    f"{os.getenv('DB_PORT', '5432')}/"
+    f"{os.getenv('DB_NAME', 'cartoonworld')}"
     )
+
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
     # Mail
