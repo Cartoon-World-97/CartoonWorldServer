@@ -13,7 +13,7 @@ class Config:
     JWT_REFRESH_TOKEN_EXPIRES = timedelta(days=30)      
     
     SQLALCHEMY_DATABASE_URI = (
-        f"postgresql+psycopg2://{os.getenv('DB_USER', 'root')}:" 
+        f"mysql+pymysql://{os.getenv('DB_USER', 'root')}:" 
         f"{os.getenv('DB_PASSWORD', '')}@"
         f"{os.getenv('DB_HOST', 'localhost')}/"
         f"{os.getenv('DB_NAME', 'cartoonworld')}"
