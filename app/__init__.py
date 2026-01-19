@@ -14,6 +14,8 @@ from .config import DevelopmentConfig
 
 from datetime import datetime
 mail = Mail()
+jwt = JWTManager()
+db_instance = db
 def create_app():
     app = Flask(__name__)
     app.config.from_object(DevelopmentConfig)
