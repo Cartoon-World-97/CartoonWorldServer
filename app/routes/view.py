@@ -1055,3 +1055,16 @@ def category():
             "Description": category.Description
         })
     return jsonify({"status": True, "categories": data}), 200
+
+@view_bp.route("/send_test_mail", methods=["GET"])
+def send_test_mail():
+    try:
+        msg = Message(
+            subject="Test Email from Flask",
+            recipients=["cartoonworld.server@gmail.com"],  # Replace with your email
+            body="Hello! This is a test email sent from your Flask app on Render."
+        )
+        mail.send(msg)
+        return jsonify({"status": "success", "message": "Test email sent successfully!"})
+    except Exception as e:
+        return jsonify({"status": "fail", "error": str(e)})
