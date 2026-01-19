@@ -23,10 +23,15 @@ def create_app():
     CORS(app, resources={r"/*": {"origins": "*"}})
 
 
-    mail = Mail(app)
-    JWTManager(app)
-    db.init_app(app)
+    # mail = Mail(app)
+    # JWTManager(app)
+    # db.init_app(app)
 
+    # Initialize extensions
+    mail.init_app(app)
+    jwt.init_app(app)
+    db_instance.init_app(app)
+    
     S = URLSafeTimedSerializer(app.config['SECRET_KEY'])
 
     app.register_blueprint(auth_bp, url_prefix="/auth")
