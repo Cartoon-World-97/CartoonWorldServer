@@ -6,10 +6,6 @@ from flask_jwt_extended import JWTManager
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from app.model import db
-from .routes.auth import auth_bp
-from .routes.view import view_bp
-from .routes.payments import payment_bp
-from .routes.plans import plans_bp
 from .config import DevelopmentConfig
 
 from datetime import datetime
@@ -33,7 +29,10 @@ def create_app():
     db_instance.init_app(app)
     
     S = URLSafeTimedSerializer(app.config['SECRET_KEY'])
-
+    from .routes.auth import auth_bp
+    from .routes.view import view_bp
+    from .routes.payments import payment_bp
+    from .routes.plans import plans_bp
     app.register_blueprint(auth_bp, url_prefix="/auth")
     app.register_blueprint(view_bp, url_prefix="/")
     app.register_blueprint(payment_bp, url_prefix="/payments")
