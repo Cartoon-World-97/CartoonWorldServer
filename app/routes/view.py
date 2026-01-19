@@ -16,6 +16,8 @@ from app.model.playlistsMaster import playlistsMaster
 from app.model.ActivePlans import ActivePlans
 from app.model.ProgramMaster import ProgramMaster
 from app.model.BannerSection import BannerSection
+from flask_mail import Mail, Message  # ✅ Make sure Message is imported
+from app import mail  # mail = Mail(app) in create_app()
 view_bp = Blueprint("view", __name__) 
 
 from flask_jwt_extended import jwt_required, get_jwt_identity
