@@ -13,7 +13,7 @@ from .routes.plans import plans_bp
 from .config import DevelopmentConfig
 
 from datetime import datetime
-
+mail = Mail()
 def create_app():
     app = Flask(__name__)
     app.config.from_object(DevelopmentConfig)
