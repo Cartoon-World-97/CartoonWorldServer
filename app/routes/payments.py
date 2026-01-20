@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from flask_mail import Mail, Message
+# from flask_mail import Mail, Message   # ❌ COMMENTED
 from flask import Blueprint, jsonify, request, current_app
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.model import db
@@ -12,6 +12,8 @@ import base64
 
 payment_bp = Blueprint("payments", __name__)
 
+MAIL_API_URL = "https://cartoonworldmailsender.vercel.app/send-mail"
+
 
 # =====================================================
 # 🔹 1. Generate PayPal Access Token
@@ -21,7 +23,6 @@ def generate_access_token():
     secret = current_app.config["PAYPAL_SECRET"]
     paypal_api = current_app.config["PAYPAL_API"]
 
-    # Encode client id + secret
     auth_string = f"{client_id}:{secret}".encode("utf-8")
     b64_auth = base64.b64encode(auth_string).decode("utf-8")
 
@@ -35,14 +36,15 @@ def generate_access_token():
     response = requests.post(
         f"{paypal_api}/v1/oauth2/token",
         headers=headers,
-        data=data
+        data=data,
+        timeout=10
     )
 
     return response.json().get("access_token")
 
 
 # =====================================================
-# 🔹 2. Create PayPal Order  (POST /payments/)
+# 🔹 2. Create PayPal Order
 # =====================================================
 @payment_bp.route('/', methods=['POST'])
 @jwt_required()
@@ -50,7 +52,7 @@ def create_order():
     paypal_api = current_app.config["PAYPAL_API"]
     access_token = generate_access_token()
 
-    user_id = get_jwt_identity()   # 🔐 from JWT
+    user_id = get_jwt_identity()
     amount = request.json.get("amount", 10)
     Program_ID = request.json.get("Program_ID")
 
@@ -72,13 +74,13 @@ def create_order():
     response = requests.post(
         f"{paypal_api}/v2/checkout/orders",
         headers=headers,
-        json=body
+        json=body,
+        timeout=10
     )
 
     data = response.json()
     order_id = data.get("id")
 
-    # 🔹 Save PENDING transaction
     txn = TransactionDetails(
         Sub_ID=user_id,
         Txn_ID=order_id,
@@ -104,7 +106,7 @@ def create_order():
 
 
 # =====================================================
-# 🔹 3. Capture Payment  (POST /payments/capture/<order_id>)
+# 🔹 3. Capture Payment
 # =====================================================
 @payment_bp.route('/capture/<order_id>', methods=['POST'])
 @jwt_required()
@@ -119,14 +121,14 @@ def capture_payment(order_id):
 
     response = requests.post(
         f"{paypal_api}/v2/checkout/orders/{order_id}/capture",
-        headers=headers
+        headers=headers,
+        timeout=10
     )
 
     result = response.json()
     status = result.get("status")
 
     txn = TransactionDetails.query.filter_by(Txn_ID=order_id).first()
-
     if txn:
         txn.Status = "SUCCESS" if status == "COMPLETED" else "FAILED"
         db.session.commit()
@@ -134,89 +136,20 @@ def capture_payment(order_id):
     return jsonify(result)
 
 
-
 # =====================================================
-# 🔹 4. Webhook (PayPal → Your Server)
+# 🔹 MAIL VIA EXTERNAL API (VALIDATED)
 # =====================================================
-# @payment_bp.route('/webhook', methods=['POST'])
-# def paypal_webhook():
-#     data = request.json
-#     event = data.get("event_type")
-
-#     if event == "PAYMENT.CAPTURE.COMPLETED":
-#         order_id = data["resource"]["supplementary_data"]["related_ids"]["order_id"]
-        
-#         txn = TransactionDetails.query.filter_by(Txn_ID=order_id).first()
-#         Program = ProgramMaster.query.filter_by(Program_ID=txn.Program_ID).first()
-#         subcriber = SubscriberMaster.query.filter_by(Sub_ID=txn.Sub_ID).first()
-#         Active_Plan = ActivePlans(
-#             Sub_ID=txn.Sub_ID,
-#             Program_ID=txn.Program_ID,
-#             Duration=Program.Duration
-#         );
-#         if txn:
-#             txn.Status = "SUCCESS"
-#             db.session.commit()
-#         def send_invoice_email(email, name, invoice_no, program_name, amount, txn_id):
-#                 mail = current_app.extensions.get('mail')
-#                 if not mail:
-#                         return False
-
-#                 msg = Message(
-#                         subject="Payment Invoice – Thank You for Your Purchase",
-#                         sender=current_app.config['MAIL_USERNAME'],
-#                         recipients=[email],
-#                         body=f"""
-#                 Hello {name},
-
-#                 Thank you for your payment! 🎉
-
-#                 Here are your invoice details:
-
-#                 Invoice No   : {invoice_no}
-#                 Program      : {program_name}
-#                 Amount Paid  : ₹{amount}
-#                 Transaction  : {txn_id}
-#                 Date         : {datetime.now().strftime('%d %b %Y, %I:%M %p')}
-
-#                 If you have any questions, feel free to contact our support team.
-
-#                 Regards,
-#                 Cartoon World Team
-#                 """
-#                     )
-#                 mail.send(msg)
-#                 return True
-#         send_invoice_email()
-
-#     elif event == "PAYMENT.CAPTURE.DENIED":
-#         order_id = data["resource"]["supplementary_data"]["related_ids"]["order_id"]
-
-#         txn = TransactionDetails.query.filter_by(Txn_ID=order_id).first()
-#         if txn:
-#             txn.Status = "FAILED"
-#             db.session.commit()
-
-#     return jsonify({"status": "OK"}), 200
-
-
-
 def send_invoice_email(email, name, invoice_no, program_name, amount, txn_id):
-    mail = current_app.extensions.get('mail')
-    if not mail:
-        return
-
-    msg = Message(
-        subject="Payment Invoice – Thank You for Your Purchase",
-        sender=current_app.config['MAIL_USERNAME'],
-        recipients=[email],
-        body=f"""
+    response = requests.post(
+        MAIL_API_URL,
+        json={
+            "to": email,
+            "subject": "Payment Invoice – Thank You for Your Purchase",
+            "message": f"""
 Hello {name},
 
 Thank you for your payment! 🎉
 
-Invoice Details:
--------------------------
 Invoice No   : {invoice_no}
 Program      : {program_name}
 Amount Paid  : ₹{amount}
@@ -226,23 +159,24 @@ Date         : {datetime.now().strftime('%d %b %Y, %I:%M %p')}
 Regards,
 Cartoon World Team
 """
+        },
+        timeout=10
     )
-    mail.send(msg)
+
+    res = response.json()
+    return res.get("success") is True
 
 
 def send_plan_activation_email(email, name, program_name, duration):
-    mail = current_app.extensions.get('mail')
-    if not mail:
-        return
-
     start_date = datetime.now()
     end_date = start_date + timedelta(days=duration)
 
-    msg = Message(
-        subject="Your Subscription is Now Active 🎉",
-        sender=current_app.config['MAIL_USERNAME'],
-        recipients=[email],
-        body=f"""
+    response = requests.post(
+        MAIL_API_URL,
+        json={
+            "to": email,
+            "subject": "Your Subscription is Now Active 🎉",
+            "message": f"""
 Hello {name},
 
 Your subscription has been activated successfully 🚀
@@ -256,12 +190,17 @@ Enjoy unlimited entertainment!
 Regards,
 Cartoon World Team
 """
+        },
+        timeout=10
     )
-    mail.send(msg)
+
+    res = response.json()
+    return res.get("success") is True
 
 
-# ---------------- PAYPAL WEBHOOK ---------------- #
-
+# =====================================================
+# 🔹 PayPal Webhook
+# =====================================================
 @payment_bp.route('/webhook', methods=['POST'])
 def paypal_webhook():
     data = request.get_json(silent=True)
@@ -283,33 +222,31 @@ def paypal_webhook():
                 Sub_ID=txn.Sub_ID
             ).first()
 
-            # Update transaction
             txn.Status = "SUCCESS"
 
-            # Activate plan
             active_plan = ActivePlans(
                 Sub_ID=txn.Sub_ID,
                 Program_ID=txn.Program_ID,
                 Duration=program.Duration
             )
+
             db.session.add(active_plan)
             db.session.commit()
 
-            # Send emails
             send_invoice_email(
-                email=subscriber.Email,
-                name=subscriber.Name,
-                invoice_no=f"INV-{txn.Txn_ID}",
-                program_name=program.Program_Name,
-                amount=program.Price,
-                txn_id=txn.Txn_ID
+                subscriber.Email,
+                subscriber.Name,
+                f"INV-{txn.Txn_ID}",
+                program.Program_Name,
+                program.Price,
+                txn.Txn_ID
             )
 
             send_plan_activation_email(
-                email=subscriber.Email,
-                name=subscriber.Name,
-                program_name=program.Program_Name,
-                duration=program.Duration
+                subscriber.Email,
+                subscriber.Name,
+                program.Program_Name,
+                program.Duration
             )
 
         except Exception as e:
@@ -322,5 +259,4 @@ def paypal_webhook():
             txn.Status = "FAILED"
             db.session.commit()
 
-    # PayPal requires 200 always
     return jsonify({"status": "OK"}), 200
