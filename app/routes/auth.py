@@ -18,6 +18,27 @@ auth_bp = Blueprint("auth", __name__)
 MAIL_API_URL = "https://cartoonworldmailsender.vercel.app/send-mail"
 
 
+# ===============================
+# ✅ MAIL RESPONSE VALIDATION
+# ===============================
+def validate_mail_response(response):
+    if not response:
+        return False, "No response from mail server"
+
+    if response.status_code != 200:
+        return False, f"Mail server HTTP {response.status_code}"
+
+    try:
+        data = response.json()
+    except Exception:
+        return False, "Invalid JSON from mail server"
+
+    if not data.get("success"):
+        return False, data.get("message", "Mail sending failed")
+
+    return True, data.get("message", "Email sent successfully")
+
+
 def generate_sub_id():
     while True:
         new_uuid = str(uuid.uuid4())
@@ -86,11 +107,11 @@ def register():
         #     mail.send(msg)
 
         # ===============================
-        # ✅ EXTERNAL MAIL API
+        # ✅ EXTERNAL MAIL API (VALIDATED)
         # ===============================
-        confirm_link = f"http://127.0.0.1:5000/auth/verify?token={token}"
+        confirm_link = f"https://cartoonworldserver.onrender.com/auth/verify?token={token}"
 
-        requests.post(
+        response = requests.post(
             MAIL_API_URL,
             json={
                 "to": email,
@@ -99,6 +120,14 @@ def register():
             },
             timeout=10
         )
+
+        mail_ok, mail_msg = validate_mail_response(response)
+
+        if not mail_ok:
+            return jsonify({
+                "status": False,
+                "Message": f"Registration completed, but email failed: {mail_msg}"
+            }), 500
 
         return jsonify({
             "status": True,
@@ -129,7 +158,7 @@ def verify():
     })
     db.session.commit()
 
-    return redirect('https://localhost:5173/signin')
+    return redirect('https://cartoonworlddev.netlify.app/signin')
 
 
 @auth_bp.route("/login", methods=['POST'])
@@ -173,9 +202,9 @@ def ResetPass():
     S = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
     token = S.dumps(user.Sub_ID, salt='email-confirm')
 
-    reset_link = f"http://127.0.0.1:5000/auth/resetverify?token={token}"
+    reset_link = f"https://cartoonworldserver.onrender.com/auth/resetverify?token={token}"
 
-    requests.post(
+    response = requests.post(
         MAIL_API_URL,
         json={
             "to": email,
@@ -184,6 +213,14 @@ def ResetPass():
         },
         timeout=10
     )
+
+    mail_ok, mail_msg = validate_mail_response(response)
+
+    if not mail_ok:
+        return jsonify({
+            "Status": False,
+            "Message": f"Email failed: {mail_msg}"
+        }), 500
 
     SubscriberMaster.query.filter_by(Email=email).update({"Ver_Url": token})
     db.session.commit()
