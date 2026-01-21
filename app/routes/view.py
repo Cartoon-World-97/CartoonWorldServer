@@ -1060,4 +1060,4 @@ def category():
 
 @view_bp.route("/renewurl", methods=["GET"])
 def send_test_mail():
-    return True
+    return jsonify({"status": True}), 200
